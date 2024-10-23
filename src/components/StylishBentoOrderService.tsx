@@ -1,6 +1,11 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { CSVLink } from "react-csv";
 import Spinner from "./Spinner";
+import { useForm } from "react-hook-form";
+
+interface FormData {
+  employeeId: string;
+}
 
 const saveOrderToDB = async (employeeId: string, bentoType: string) => {
   await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -16,25 +21,64 @@ const bentoTypes = [
 ];
 
 export default function StylishBentoOrderService() {
-  const [employeeId, setEmployeeId] = useState("");
   const [selectedBento, setSelectedBento] = useState<string | null>(null);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isOrderComplete, setIsOrderComplete] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [orders, setOrders] = useState<
     Array<{ date: string; employeeId: string; bentoType: string }>
   >([]);
-  const [isOrdering, setIsOrdering] = useState(false); // 注文処理中のフラグを追加
+  const [isOrdering, setIsOrdering] = useState(false);
 
-  const handleEmployeeIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setEmployeeId(e.target.value);
-    setErrorMessage(null);
+  // 新しい状態変数を追加
+  const [isOrderAttempted, setIsOrderAttempted] = useState(false);
+  const [isFieldBlurred, setIsFieldBlurred] = useState(false);
+  const [isFieldTouched, setIsFieldTouched] = useState(false); // フィールドがタッチされたかどうか
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, touchedFields }, // NOTE:touchedFieldsはresetで状態が消えるため使わない
+    getValues,
+    trigger,
+    reset,
+    watch,
+  } = useForm<FormData>({
+    mode: "onChange", // 入力変更時にバリデーションを実行
+    criteriaMode: "all",
+    defaultValues: {
+      employeeId: "",
+    },
+  });
+
+  const employeeIdValue = watch("employeeId");
+
+  // カスタムバリデーション関数を定義
+  const validateEmployeeId = (value: string) => {
+    if (!value) {
+      if (isOrderAttempted || isFieldTouched) {
+        return "社員番号を入力してください。";
+      }
+      return true; // 未入力エラーは表示しない
+    }
+    if (/[^0-9]/.test(value)) {
+      return "社員番号は半角数字のみを入力してください。";
+    }
+    if ((isFieldBlurred || isOrderAttempted) && value.length < 3) {
+      return "社員番号は3桁以上で入力してください。";
+    }
+    if (value.length > 6) {
+      return "社員番号は6桁以下で入力してください。";
+    }
+    return true;
   };
 
-  const handleBentoSelection = (bentoId: string) => {
-    if (!employeeId) {
-      setErrorMessage("社員番号を入力してください。");
+  const errorMessage = errors.employeeId?.message;
+
+  const handleBentoSelection = async (bentoId: string) => {
+    setIsOrderAttempted(true); // 追加
+    const isValid = await trigger("employeeId");
+    if (!isValid) {
       return;
     }
     setSelectedBento(bentoId);
@@ -42,26 +86,29 @@ export default function StylishBentoOrderService() {
   };
 
   const handleOrder = async () => {
-    if (selectedBento && employeeId && !isOrdering) {
-      setIsOrdering(true); // 注文処理開始
+    const employeeId = getValues("employeeId");
+    if (selectedBento && !isOrdering) {
+      setIsOrdering(true);
       const success = await saveOrderToDB(employeeId, selectedBento);
       if (success) {
         setIsConfirmOpen(false);
         setIsOrderComplete(true);
         setToastMessage("弁当の注文が完了しました。");
-        // 注文をorders配列に追加
         setOrders((prevOrders) => [
           ...prevOrders,
           {
             date: new Date().toISOString(),
             employeeId: employeeId,
-            bentoType: selectedBento,
+            bentoType: selectedBento!,
           },
         ]);
-        setEmployeeId("");
+        reset({ employeeId: "" });
         setSelectedBento(null);
+        setIsOrderAttempted(false);
+        setIsFieldBlurred(false);
+        setIsFieldTouched(false);
       }
-      setIsOrdering(false); // 注文処理終了
+      setIsOrdering(false);
     }
   };
 
@@ -97,12 +144,18 @@ export default function StylishBentoOrderService() {
           <input
             type="text"
             id="employeeId"
-            value={employeeId}
-            onChange={handleEmployeeIdChange}
-            placeholder="社員番号を入力してください"
+            {...register("employeeId", {
+              validate: validateEmployeeId,
+              onChange: () => setIsFieldTouched(true), // フィールドがタッチされたことを設定
+            })}
+            placeholder="社員番号を入力してください　(例:111)"
             className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-gray-100 placeholder-gray-400"
+            onBlur={() => setIsFieldBlurred(true)}
           />
-          {errorMessage && <p className="mt-2 text-red-500">{errorMessage}</p>}
+          {/* エラーメッセージの表示 */}
+          {errors.employeeId && (isFieldTouched || isOrderAttempted) && (
+            <p className="mt-2 text-red-500">{errorMessage}</p>
+          )}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-8">
@@ -122,7 +175,12 @@ export default function StylishBentoOrderService() {
                 </h3>
                 <button
                   onClick={() => handleBentoSelection(bento.id)}
-                  className="w-full bg-gradient-to-r from-teal-500 to-blue-500 text-white py-2 px-4 rounded-md hover:from-teal-600 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-opacity-50 transition duration-300 ease-in-out transform hover:-translate-y-1"
+                  disabled={!employeeIdValue || !!errors.employeeId}
+                  className={`w-full bg-gradient-to-r from-teal-500 to-blue-500 text-white py-2 px-4 rounded-md transition duration-300 ease-in-out transform ${
+                    !employeeIdValue || !!errors.employeeId
+                      ? "opacity-50 cursor-not-allowed"
+                      : "hover:from-teal-600 hover:to-blue-600 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-opacity-50"
+                  }`}
                 >
                   注文する
                 </button>
@@ -164,10 +222,10 @@ export default function StylishBentoOrderService() {
                 <button
                   onClick={handleOrder}
                   disabled={isOrdering}
-                  className={`px-4 py-2 bg-gradient-to-r from-teal-500 to-blue-500 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-opacity-50 transition duration-300 ${
+                  className={`px-4 py-2 bg-gradient-to-r from-teal-500 to-blue-500 text-white rounded-md transition duration-300 ${
                     isOrdering
                       ? "cursor-not-allowed opacity-50"
-                      : "hover:from-teal-600 hover:to-blue-600"
+                      : "hover:from-teal-600 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-opacity-50"
                   }`}
                 >
                   注文する

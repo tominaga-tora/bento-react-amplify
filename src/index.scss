@@ -1,3 +1,14 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* NOTE:フォームでオートコンプリート時のスタイルが崩れるため以下で防止  */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #f3f4f6; /* テキスト色（text-gray-100） */
+  -webkit-box-shadow: 0 0 0px 1000px #374151 inset,
+    /* 背景色（bg-gray-700） */ 0 0 0 2px #14b8a6; /* アウトラインの太さと色（ring-2, ring-teal-500） */
+  box-shadow: 0 0 0 2px #14b8a6; /* 非WebKitブラウザ用のアウトライン */
+  transition: background-color 5000s ease-in-out 0s;
+}
