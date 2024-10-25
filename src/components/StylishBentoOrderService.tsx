@@ -14,10 +14,10 @@ const saveOrderToDB = async (employeeId: string, bentoType: string) => {
 };
 
 const bentoTypes = [
-  { id: "A", name: "Bento A", image: "/src/assets/bento/001.jpg" },
-  { id: "B", name: "Bento B", image: "/src/assets/bento/002.jpg" },
-  { id: "C", name: "Bento C", image: "/src/assets/bento/003.jpg" },
-  { id: "D", name: "Bento D", image: "/src/assets/bento/004.jpg" },
+  { id: "A", name: "Bento A", image: "/bento/001.jpg" },
+  { id: "B", name: "Bento B", image: "/bento/002.jpg" },
+  { id: "C", name: "Bento C", image: "/bento/003.jpg" },
+  { id: "D", name: "Bento D", image: "/bento/004.jpg" },
 ];
 
 export default function StylishBentoOrderService() {
