@@ -37,8 +37,7 @@ export default function StylishBentoOrderService() {
 
   const {
     register,
-    handleSubmit,
-    formState: { errors, touchedFields }, // NOTE:touchedFieldsはresetで状態が消えるため使わない
+    formState: { errors },
     getValues,
     trigger,
     reset,
