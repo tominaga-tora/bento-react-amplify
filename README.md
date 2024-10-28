@@ -131,5 +131,4 @@ ampx sandbox
 
 ### アプリ画面参考(しばらくしたら Amplify の公開をやめるので、雰囲気だけ載せておきます)
 
-![alt text](docs/image/image.png)![alt text](docs/image/image-1.png)
-![alt text](docs/image/sp1.png)
+<img src="docs/image/image-1.png" width="35%"><img src="docs/image/image.png" width="35%"><img src="docs/image/sp1.png" width="30%">
