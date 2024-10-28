@@ -1,16 +1,33 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { CSVLink } from "react-csv";
 import Spinner from "./Spinner";
 import { useForm } from "react-hook-form";
+import { dataService } from "../shared/services/dataServices";
 
 interface FormData {
   employeeId: string;
 }
 
-const saveOrderToDB = async (employeeId: string, bentoType: string) => {
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-  console.log(`Order saved: Employee ${employeeId} ordered ${bentoType}`);
+const saveOrderToDB = async (employeeId: string, bentoId: string) => {
+  try {
+    await dataService.createOrder({
+      employee_id: employeeId,
+      bento_id: bentoId,
+    });
+  } catch (error) {
+    return false;
+  }
+  console.log(`Order saved: Employee ${employeeId} ordered ${bentoId}`);
   return true;
+};
+
+const getOrdersFromDB = async () => {
+  try {
+    const orders = await dataService.getOrders();
+    return orders;
+  } catch (error) {
+    return [];
+  }
 };
 
 const bentoTypes = [
@@ -21,12 +38,19 @@ const bentoTypes = [
 ];
 
 export default function StylishBentoOrderService() {
-  const [selectedBento, setSelectedBento] = useState<string | null>(null);
+  const [selectedBentoId, setSelectedBentoId] = useState<string | null>(null);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isOrderComplete, setIsOrderComplete] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [orders, setOrders] = useState<
-    Array<{ date: string; employeeId: string; bentoType: string }>
+    Array<{
+      order_id: string;
+      employee_id: string;
+      bento_id: string;
+      timestamp: string;
+      readonly createdAt: string;
+      readonly updatedAt: string;
+    }>
   >([]);
   const [isOrdering, setIsOrdering] = useState(false);
 
@@ -51,6 +75,16 @@ export default function StylishBentoOrderService() {
   });
 
   const employeeIdValue = watch("employeeId");
+
+  const csvData = [
+    ["Order ID", "Employee ID", "Bento ID", "Timestamp"],
+    ...orders.map((order) => [
+      order.order_id,
+      order.employee_id,
+      order.bento_id,
+      order.timestamp,
+    ]),
+  ];
 
   // カスタムバリデーション関数を定義
   const validateEmployeeId = (value: string) => {
@@ -80,29 +114,26 @@ export default function StylishBentoOrderService() {
     if (!isValid) {
       return;
     }
-    setSelectedBento(bentoId);
+    setSelectedBentoId(bentoId);
     setIsConfirmOpen(true);
   };
 
   const handleOrder = async () => {
     const employeeId = getValues("employeeId");
-    if (selectedBento && !isOrdering) {
+    if (selectedBentoId && !isOrdering) {
       setIsOrdering(true);
-      const success = await saveOrderToDB(employeeId, selectedBento);
+      const success = await saveOrderToDB(employeeId, selectedBentoId);
       if (success) {
         setIsConfirmOpen(false);
         setIsOrderComplete(true);
         setToastMessage("弁当の注文が完了しました。");
-        setOrders((prevOrders) => [
-          ...prevOrders,
-          {
-            date: new Date().toISOString(),
-            employeeId: employeeId,
-            bentoType: selectedBento!,
-          },
-        ]);
+
+        // 最新の注文履歴を取得してステートを更新
+        const updatedOrders = await getOrdersFromDB();
+
+        setOrders(updatedOrders);
         reset({ employeeId: "" });
-        setSelectedBento(null);
+        setSelectedBentoId(null);
         setIsOrderAttempted(false);
         setIsFieldBlurred(false);
         setIsFieldTouched(false);
@@ -120,10 +151,19 @@ export default function StylishBentoOrderService() {
     }
   }, [toastMessage]);
 
-  const csvData = [
-    ["Date", "EmployeeID", "BentoType"],
-    ...orders.map((order) => [order.date, order.employeeId, order.bentoType]),
-  ];
+  // 開発環境で2回実行を防ぐためのフラグ
+  const hasFetched = useRef(false);
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      if (hasFetched.current) return;
+      console.log("test Fetching orders...");
+      hasFetched.current = true;
+      const orders = await getOrdersFromDB();
+      setOrders(orders);
+    };
+    fetchOrders();
+  }, []);
 
   return (
     <div className="bg-gradient-to-br from-gray-900 to-gray-800 min-h-screen text-gray-100 relative">
@@ -205,9 +245,9 @@ export default function StylishBentoOrderService() {
                 注文の確認
               </h2>
               <p className="mb-6 text-gray-300">
-                {selectedBento &&
+                {selectedBentoId &&
                   `${
-                    bentoTypes.find((b) => b.id === selectedBento)?.name
+                    bentoTypes.find((b) => b.id === selectedBentoId)?.name
                   }を注文しますか？`}
               </p>
               <div className="flex justify-end gap-4">
