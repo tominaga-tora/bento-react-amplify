@@ -129,6 +129,6 @@ ampx sandbox
 - 感想
   - 技術検証用なためサービスとしては使えないアプリですが、Amplify Gen2 で参考になるコードがまだ少ないため、公開リポジトリとして、接続部などどなたかの参考になれば嬉しいです。
 
-### アプリ画面参考(しばらくしたら Amplify の公開をやめるので、雰囲気だけ載せておきます)
+### アプリ画面参考
 
-<img src="docs/image/image-1.png" width="35%"><img src="docs/image/image.png" width="35%"><img src="docs/image/sp1.png" width="30%">
+<img src="docs/image/image-1.png" width="40%"><img src="docs/image/image.png" width="40%"><img src="docs/image/sp1.png" width="20%">
