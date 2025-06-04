@@ -54,10 +54,7 @@ export default function StylishBentoOrderService() {
   >([]);
   const [isOrdering, setIsOrdering] = useState(false);
 
-  // 新しい状態変数を追加
-  const [isOrderAttempted, setIsOrderAttempted] = useState(false);
-  const [isFieldBlurred, setIsFieldBlurred] = useState(false);
-  const [isFieldTouched, setIsFieldTouched] = useState(false); // フィールドがタッチされたかどうか
+  const [showErrors, setShowErrors] = useState(false); // エラー表示フラグ
 
   const {
     register,
@@ -67,7 +64,7 @@ export default function StylishBentoOrderService() {
     reset,
     watch,
   } = useForm<FormData>({
-    mode: "onChange", // 入力変更時にバリデーションを実行
+    mode: "onChange",
     criteriaMode: "all",
     defaultValues: {
       employeeId: "",
@@ -89,15 +86,12 @@ export default function StylishBentoOrderService() {
   // カスタムバリデーション関数を定義
   const validateEmployeeId = (value: string) => {
     if (!value) {
-      if (isOrderAttempted || isFieldTouched) {
-        return "社員番号を入力してください。";
-      }
-      return true; // 未入力エラーは表示しない
+      return "社員番号を入力してください。";
     }
     if (/[^0-9]/.test(value)) {
       return "社員番号は半角数字のみを入力してください。";
     }
-    if ((isFieldBlurred || isOrderAttempted) && value.length < 3) {
+    if (value.length < 3) {
       return "社員番号は3桁以上で入力してください。";
     }
     if (value.length > 6) {
@@ -109,7 +103,7 @@ export default function StylishBentoOrderService() {
   const errorMessage = errors.employeeId?.message;
 
   const handleBentoSelection = async (bentoId: string) => {
-    setIsOrderAttempted(true); // 追加
+    setShowErrors(true);
     const isValid = await trigger("employeeId");
     if (!isValid) {
       return;
@@ -134,9 +128,7 @@ export default function StylishBentoOrderService() {
         setOrders(updatedOrders);
         reset({ employeeId: "" });
         setSelectedBentoId(null);
-        setIsOrderAttempted(false);
-        setIsFieldBlurred(false);
-        setIsFieldTouched(false);
+        setShowErrors(false);
       }
       setIsOrdering(false);
     }
@@ -183,16 +175,16 @@ export default function StylishBentoOrderService() {
           <input
             type="text"
             id="employeeId"
-            {...register("employeeId", {
-              validate: validateEmployeeId,
-              onChange: () => setIsFieldTouched(true), // フィールドがタッチされたことを設定
-            })}
+            {...register("employeeId", { validate: validateEmployeeId })}
             placeholder="社員番号を入力してください　(例:111)"
             className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-gray-100 placeholder-gray-400"
-            onBlur={() => setIsFieldBlurred(true)}
+            onBlur={() => {
+              setShowErrors(true);
+              void trigger("employeeId");
+            }}
           />
           {/* エラーメッセージの表示 */}
-          {errors.employeeId && (isFieldTouched || isOrderAttempted) && (
+          {errors.employeeId && showErrors && (
             <p className="mt-2 text-red-500">{errorMessage}</p>
           )}
         </div>
