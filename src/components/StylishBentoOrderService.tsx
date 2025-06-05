@@ -54,7 +54,7 @@ export default function StylishBentoOrderService() {
   >([]);
   const [isOrdering, setIsOrdering] = useState(false);
 
-  const [showErrors, setShowErrors] = useState(false); // エラー表示フラグ
+  const [isShowErrors, setIsShowErrors] = useState(false); // エラー表示フラグ
 
   const {
     register,
@@ -103,7 +103,7 @@ export default function StylishBentoOrderService() {
   const errorMessage = errors.employeeId?.message;
 
   const handleBentoSelection = async (bentoId: string) => {
-    setShowErrors(true);
+    setIsShowErrors(true);
     const isValid = await trigger("employeeId");
     if (!isValid) {
       return;
@@ -128,7 +128,7 @@ export default function StylishBentoOrderService() {
         setOrders(updatedOrders);
         reset({ employeeId: "" });
         setSelectedBentoId(null);
-        setShowErrors(false);
+        setIsShowErrors(false);
       }
       setIsOrdering(false);
     }
@@ -179,12 +179,12 @@ export default function StylishBentoOrderService() {
             placeholder="社員番号を入力してください　(例:111)"
             className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-gray-100 placeholder-gray-400"
             onBlur={() => {
-              setShowErrors(true);
+              setIsShowErrors(true);
               void trigger("employeeId");
             }}
           />
           {/* エラーメッセージの表示 */}
-          {errors.employeeId && showErrors && (
+          {errors.employeeId && isShowErrors && (
             <p className="mt-2 text-red-500">{errorMessage}</p>
           )}
         </div>
